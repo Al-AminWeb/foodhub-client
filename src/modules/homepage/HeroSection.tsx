@@ -1,66 +1,74 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, Play } from "lucide-react";
 import Link from "next/link";
 
 export function HeroSection() {
     return (
-        <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 via-background to-background py-20 md:py-32">
-            <div className="container mx-auto max-w-7xl px-4">
+        <section className="relative overflow-hidden bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white py-20 md:py-32">
+            {/* Decorative circles */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+
+            <div className="container mx-auto max-w-7xl px-4 relative z-10">
                 <div className="flex flex-col items-center text-center space-y-8">
                     {/* Badge */}
-                    <div className="inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium">
-                        <span className="flex h-2 w-2 rounded-full bg-primary mr-2"></span>
-                        500+ Local Restaurants
+                    <div className="inline-flex items-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-1.5 text-sm font-medium">
+                        <span className="flex h-2 w-2 rounded-full bg-yellow-300 mr-2 animate-pulse"></span>
+                        🔥 500+ Local Restaurants
                     </div>
 
                     {/* Heading */}
-                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight max-w-4xl">
+                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight max-w-5xl leading-tight">
                         Delicious Meals <br className="hidden sm:block" />
-                        <span className="text-primary">Delivered Fast</span>
+                        <span className="text-yellow-300">Delivered Fast</span>
                     </h1>
 
                     {/* Subheading */}
-                    <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                    <p className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto font-medium">
                         Discover the best local restaurants, browse menus, and order your favorite meals with ease.
-                        Cash on delivery available.
+                        <span className="text-yellow-300 font-bold"> Cash on delivery available.</span>
                     </p>
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4 mt-8">
                         <Link href="/meals">
-                            <Button size="lg" className="gap-2 px-8">
-                                <Search className="h-4 w-4" />
+                            <Button size="lg" className="gap-2 px-8 bg-white text-orange-600 hover:bg-gray-100 font-bold text-lg shadow-2xl shadow-black/20">
+                                <Search className="h-5 w-5" />
                                 Browse Meals
                             </Button>
                         </Link>
                         <Link href="/register">
-                            <Button size="lg" variant="outline" className="gap-2 px-8">
+                            <Button size="lg" variant="outline" className="gap-2 px-8 bg-transparent border-2 border-white text-white hover:bg-white/10 font-bold text-lg">
                                 Become a Provider
-                                <ArrowRight className="h-4 w-4" />
+                                <ArrowRight className="h-5 w-5" />
                             </Button>
                         </Link>
                     </div>
 
                     {/* Stats */}
-                    <div className="flex gap-8 md:gap-16 mt-12 pt-8 border-t w-full max-w-2xl justify-center">
+                    <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-12 pt-8 border-t border-white/20 w-full max-w-3xl">
                         <div className="text-center">
-                            <div className="text-2xl md:text-3xl font-bold">500+</div>
-                            <div className="text-sm text-muted-foreground">Restaurants</div>
+                            <div className="text-4xl md:text-5xl font-bold text-yellow-300">500+</div>
+                            <div className="text-white/80 text-sm mt-1">Restaurants</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl md:text-3xl font-bold">10k+</div>
-                            <div className="text-sm text-muted-foreground">Happy Customers</div>
+                            <div className="text-4xl md:text-5xl font-bold text-yellow-300">10k+</div>
+                            <div className="text-white/80 text-sm mt-1">Happy Customers</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl md:text-3xl font-bold">30min</div>
-                            <div className="text-sm text-muted-foreground">Avg. Delivery</div>
+                            <div className="text-4xl md:text-5xl font-bold text-yellow-300">30min</div>
+                            <div className="text-white/80 text-sm mt-1">Avg. Delivery</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Background decoration */}
-            <div className="absolute inset-0 -z-10 h-full w-full bg-white bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+            {/* Wave divider */}
+            <div className="absolute bottom-0 left-0 right-0 translate-y-1">
+                <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V120Z" fill="white"/>
+                </svg>
+            </div>
         </section>
     );
 }
