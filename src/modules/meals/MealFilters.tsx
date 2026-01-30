@@ -1,63 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, Filter } from "lucide-react";
 
-const categories = [
-    "All",
-    "Fast Food",
-    "Fine Dining",
-    "Healthy",
-    "Seafood",
-    "Beverages",
-    "BBQ",
-    "Italian",
-    "Asian",
-    "Desserts"
-];
+interface Filters {
+    search: string;
+    category: string;
+    minPrice: string;
+    maxPrice: string;
+    sortBy: string;
+}
 
-const sortOptions = [
-    { label: "Featured", value: "featured" },
-    { label: "Price: Low to High", value: "price-asc" },
-    { label: "Price: High to Low", value: "price-desc" },
-    { label: "Rating: High to Low", value: "rating" },
-    { label: "Newest", value: "newest" }
-];
+interface MealFiltersProps {
+    filters: Filters;
+    setFilters: (filters: Filters) => void;
+}
 
-export function MealFilters() {
-    const [selectedCategory, setSelectedCategory] = useState("All");
-    const [searchQuery, setSearchQuery] = useState("");
+type Category = {
+    id: string;
+    name: string;
+};
+
+export function MealFilters({ filters, setFilters }: MealFiltersProps) {
+    const [categories, setCategories] = useState<Category[]>([{ id: "all", name: "All" }]);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
-    const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-    const [sortBy, setSortBy] = useState("featured");
 
-    const clearFilters = () => {
-        setSelectedCategory("All");
-        setSearchQuery("");
-        setPriceRange({ min: "", max: "" });
-        setSortBy("featured");
+    // Fetch categories from backend
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
+                const data = await res.json();
+                if (data.success) {
+                    setCategories([{ id: "all", name: "All" }, ...data.data]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch categories", err);
+            }
+        };
+
+        loadCategories();
+    }, []);
+
+    const handleSearchChange = (value: string) => {
+        setFilters({ ...filters, search: value });
     };
 
-    const hasActiveFilters = selectedCategory !== "All" || searchQuery || priceRange.min || priceRange.max;
+    const handleCategoryChange = (categoryName: string) => {
+        setFilters({ ...filters, category: categoryName });
+    };
+
+    const handlePriceChange = (type: 'min' | 'max', value: string) => {
+        setFilters({
+            ...filters,
+            [type === 'min' ? 'minPrice' : 'maxPrice']: value
+        });
+    };
+
+    const clearFilters = () => {
+        setFilters({
+            search: "",
+            category: "All",
+            minPrice: "",
+            maxPrice: "",
+            sortBy: "featured",
+        });
+    };
+
+    const hasActiveFilters = filters.category !== "All" ||
+        filters.search ||
+        filters.minPrice ||
+        filters.maxPrice;
 
     return (
-        <div className="space-y-6 mb-8">
+        <div className="space-y-6">
             {/* Search and Top Row */}
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div className="relative w-full md:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <Input
-                        placeholder="Search meals, cuisines, restaurants..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-12 border-gray-200 focus:border-orange-500 focus:ring-orange-500 bg-white"
+                        placeholder="Search meals, cuisines..."
+                        value={filters.search}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        className="pl-10 h-12 border-2 border-gray-100 focus:border-orange-500 focus:ring-orange-500 bg-gray-50 focus:bg-white transition-all"
                     />
-                    {searchQuery && (
+                    {filters.search && (
                         <button
-                            onClick={() => setSearchQuery("")}
+                            onClick={() => handleSearchChange("")}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
                             <X className="h-4 w-4" />
@@ -68,24 +100,38 @@ export function MealFilters() {
                 <div className="flex gap-3 w-full md:w-auto">
                     <Button
                         variant="outline"
-                        className="md:hidden gap-2"
+                        className="md:hidden gap-2 border-2 border-gray-200"
                         onClick={() => setShowMobileFilters(!showMobileFilters)}
                     >
                         <SlidersHorizontal className="h-4 w-4" />
                         Filters
+                        {hasActiveFilters && (
+                            <Badge className="ml-1 bg-orange-600 text-white text-xs">
+                                !
+                            </Badge>
+                        )}
                     </Button>
 
                     <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                        className="h-12 px-4 rounded-md border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-orange-500 w-full md:w-auto"
+                        value={filters.sortBy}
+                        onChange={(e) => setFilters({ ...filters, sortBy: e.target.value })}
+                        className="h-12 px-4 rounded-lg border-2 border-gray-100 bg-white text-sm focus:border-orange-500 focus:ring-orange-500 outline-none cursor-pointer hover:border-orange-200 transition-colors"
                     >
-                        {sortOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                                Sort by: {option.label}
-                            </option>
-                        ))}
+                        <option value="featured">Sort by: Featured</option>
+                        <option value="price-asc">Price: Low to High</option>
+                        <option value="price-desc">Price: High to Low</option>
+                        <option value="rating">Top Rated</option>
                     </select>
+
+                    {hasActiveFilters && (
+                        <Button
+                            variant="ghost"
+                            onClick={clearFilters}
+                            className="hidden md:flex text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        >
+                            <X className="h-4 w-4 mr-1" /> Clear
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -93,76 +139,113 @@ export function MealFilters() {
             <div className="hidden md:flex flex-wrap gap-2">
                 {categories.map((category) => (
                     <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                            selectedCategory === category
-                                ? "bg-orange-600 text-white shadow-md shadow-orange-500/20"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        key={category.id}
+                        onClick={() => handleCategoryChange(category.name)}
+                        className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                            filters.category === category.name
+                                ? "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                         }`}
                     >
-                        {category}
+                        {category.name}
                     </button>
                 ))}
             </div>
 
             {/* Mobile Filters */}
             {showMobileFilters && (
-                <div className="md:hidden bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+                <div className="md:hidden bg-orange-50 p-4 rounded-xl border-2 border-orange-100 space-y-4">
+                    <p className="font-semibold text-gray-900 mb-2">Categories</p>
                     <div className="flex flex-wrap gap-2">
                         {categories.map((category) => (
                             <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
+                                key={category.id}
+                                onClick={() => handleCategoryChange(category.name)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                                    selectedCategory === category
+                                    filters.category === category.name
                                         ? "bg-orange-600 text-white"
-                                        : "bg-gray-100 text-gray-600"
+                                        : "bg-white text-gray-600 border border-gray-200"
                                 }`}
                             >
-                                {category}
+                                {category.name}
                             </button>
                         ))}
+                    </div>
+
+                    <div className="pt-2 border-t border-orange-200">
+                        <p className="font-semibold text-gray-900 mb-2">Price Range (৳)</p>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                type="number"
+                                placeholder="Min"
+                                value={filters.minPrice}
+                                onChange={(e) => handlePriceChange('min', e.target.value)}
+                                className="w-full bg-white border-orange-200 focus:border-orange-500"
+                            />
+                            <span className="text-gray-400">-</span>
+                            <Input
+                                type="number"
+                                placeholder="Max"
+                                value={filters.maxPrice}
+                                onChange={(e) => handlePriceChange('max', e.target.value)}
+                                className="w-full bg-white border-orange-200 focus:border-orange-500"
+                            />
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Price Range & Active Filters */}
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-4 w-full md:w-auto">
-                    <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">Price Range:</span>
-                    <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* Price Range & Active Filters - Desktop */}
+            <div className="hidden md:flex items-center gap-6 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-3">
+                    <Filter className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm font-semibold text-gray-700">Price Range (৳):</span>
+                    <div className="flex items-center gap-2">
                         <Input
                             type="number"
                             placeholder="Min"
-                            value={priceRange.min}
-                            onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                            className="w-24 h-9 text-sm"
+                            value={filters.minPrice}
+                            onChange={(e) => handlePriceChange('min', e.target.value)}
+                            className="w-24 h-10 border-2 border-gray-100 focus:border-orange-500"
                         />
                         <span className="text-gray-400">-</span>
                         <Input
                             type="number"
                             placeholder="Max"
-                            value={priceRange.max}
-                            onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                            className="w-24 h-9 text-sm"
+                            value={filters.maxPrice}
+                            onChange={(e) => handlePriceChange('max', e.target.value)}
+                            className="w-24 h-10 border-2 border-gray-100 focus:border-orange-500"
                         />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                    {hasActiveFilters && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={clearFilters}
-                            className="text-gray-500 hover:text-gray-700"
-                        >
-                            Clear Filters
-                        </Button>
-                    )}
-                    <span className="text-sm text-gray-500">Showing <span className="font-bold text-gray-900">24</span> meals</span>
-                </div>
+                {hasActiveFilters && (
+                    <div className="flex items-center gap-2 ml-auto">
+                        <span className="text-sm text-gray-500">Active filters:</span>
+                        <div className="flex gap-2">
+                            {filters.category !== "All" && (
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer"
+                                    onClick={() => handleCategoryChange("All")}
+                                >
+                                    {filters.category} <X className="h-3 w-3 ml-1" />
+                                </Badge>
+                            )}
+                            {(filters.minPrice || filters.maxPrice) && (
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer"
+                                    onClick={() => {
+                                        setFilters({ ...filters, minPrice: "", maxPrice: "" });
+                                    }}
+                                >
+                                    ৳{filters.minPrice || "0"} - ৳{filters.maxPrice || "∞"} <X className="h-3 w-3 ml-1" />
+                                </Badge>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
