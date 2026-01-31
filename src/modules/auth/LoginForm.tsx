@@ -22,12 +22,10 @@ export function LoginForm() {
         setIsLoading(true);
 
         try {
-
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password }),
-                credentials: "include",
             });
 
             const data = await res.json();
@@ -37,13 +35,14 @@ export function LoginForm() {
                 return;
             }
 
+            // ✅ STORE TOKEN HERE - This is the critical fix!
+            localStorage.setItem("token", data.data.token);
+
             toast.success("Login successful!");
-
-
             router.push("/dashboard");
             router.refresh();
         } catch (error) {
-            toast.error("Something went wrong");
+            toast.error("Something went wrong. Please try again.");
         } finally {
             setIsLoading(false);
         }

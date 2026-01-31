@@ -38,6 +38,9 @@ interface Provider {
     meals: Meal[];
 }
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop";
+
+
 export default function ProviderDetailPage() {
     const params = useParams();
     const providerId = params.id as string;
@@ -196,11 +199,11 @@ export default function ProviderDetailPage() {
                                     {/* Meal Image */}
                                     <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                                         <img
-                                            src={meal.image || "/api/placeholder/400/300"}
+                                            src={meal.image || FALLBACK_IMAGE}
                                             alt={meal.name}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             onError={(e) => {
-                                                (e.target as HTMLImageElement).src = "/api/placeholder/400/300";
+                                                (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
                                             }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
@@ -235,7 +238,7 @@ export default function ProviderDetailPage() {
                                             className="bg-orange-600 hover:bg-orange-700 text-white gap-1"
                                             onClick={() => {
                                                 console.log("Adding to cart:", meal.name);
-                                                // Add to cart logic here
+
                                             }}
                                         >
                                             <Plus className="h-4 w-4" /> Add
@@ -248,7 +251,7 @@ export default function ProviderDetailPage() {
                         <div className="text-center py-16 bg-gray-50 rounded-xl">
                             <UtensilsCrossed className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                             <h3 className="text-xl font-bold text-gray-900 mb-2">No menu items yet</h3>
-                            <p className="text-gray-500">This restaurant hasn't added any meals yet</p>
+                            <p className="text-gray-500">This restaurant has not added any meals yet</p>
                         </div>
                     )}
                 </div>
