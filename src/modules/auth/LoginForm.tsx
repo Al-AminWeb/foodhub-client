@@ -35,7 +35,7 @@ export function LoginForm() {
                 return;
             }
 
-            // ✅ STORE TOKEN HERE - This is the critical fix!
+
             localStorage.setItem("token", data.data.token);
 
             toast.success("Login successful!");
