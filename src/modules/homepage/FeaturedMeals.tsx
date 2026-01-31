@@ -1,17 +1,61 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Star, Plus, Flame } from "lucide-react";
-import Link from "next/link";
+"use client";
 
-const featuredMeals = [
-    { id: "1", name: "Grilled Salmon", description: "Fresh Atlantic salmon with herbs and lemon", price: 24.99, category: "Seafood", rating: 4.8, restaurant: "Ocean's Delight", color: "bg-blue-500" },
-    { id: "2", name: "Beef Burger", description: "Premium beef patty with fresh vegetables", price: 16.99, category: "Fast Food", rating: 4.6, restaurant: "Burger Palace", color: "bg-red-500" },
-    { id: "3", name: "Caesar Salad", description: "Fresh romaine lettuce with parmesan and croutons", price: 12.99, category: "Healthy", rating: 4.5, restaurant: "Green Garden", color: "bg-green-500" },
-    { id: "4", name: "Pasta Carbonara", description: "Creamy Italian pasta with bacon and eggs", price: 18.99, category: "Italian", rating: 4.7, restaurant: "Roma Restaurant", color: "bg-yellow-500" },
-];
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Flame, Loader2 } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+
+interface Meal {
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+    image: string | null;
+    providerId: string;
+    categoryId: string;
+}
+
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop";
 
 export function FeaturedMeals() {
+    const [meals, setMeals] = useState<Meal[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchMeals = async () => {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/meals`);
+                const data = await res.json();
+
+                if (data.success) {
+                    // Get all meals, sort alphabetically by name, take first 4
+                    const sortedMeals = (data.data || [])
+                        .sort((a: Meal, b: Meal) => a.name.localeCompare(b.name))
+                        .slice(0, 4);
+                    setMeals(sortedMeals);
+                }
+            } catch (error) {
+                console.error("Failed to fetch featured meals");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchMeals();
+    }, []);
+
+    if (loading) {
+        return (
+            <section className="py-20 md:py-28 bg-gradient-to-b from-white to-orange-50/30">
+                <div className="container mx-auto max-w-7xl px-4 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="py-20 md:py-28 bg-gradient-to-b from-white to-orange-50/30">
             <div className="container mx-auto max-w-7xl px-4">
@@ -34,43 +78,51 @@ export function FeaturedMeals() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {featuredMeals.map((meal) => (
+                    {meals.map((meal) => (
                         <Card key={meal.id} className="overflow-hidden group border-none shadow-lg hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-300 hover:-translate-y-2 bg-white">
-                            {/* Image Container with Gradient */}
-                            <div className="relative aspect-[4/3] overflow-hidden">
-                                <div className={`absolute inset-0 ${meal.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                            {/* Image Container */}
+                            <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+                                <Image
+                                    src={meal.image || FALLBACK_IMAGE}
+                                    alt={meal.name}
+                                    fill
+                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-
-                                <Badge className="absolute top-4 left-4 bg-white/90 text-gray-800 hover:bg-white font-semibold shadow-md">
-                                    {meal.category}
-                                </Badge>
-
-                                <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/90 px-2 py-1 rounded-full shadow-md">
-                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-sm font-bold text-gray-800">{meal.rating}</span>
-                                </div>
                             </div>
 
                             <CardContent className="pt-6">
-                                <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-orange-600 transition-colors">{meal.name}</h3>
-                                <p className="text-sm text-gray-500 mb-3 line-clamp-2 leading-relaxed">{meal.description}</p>
-                                <p className="text-sm font-medium text-gray-400 flex items-center gap-1">
-                                    by <span className="text-orange-600">{meal.restaurant}</span>
+                                <h3 className="font-bold text-xl mb-2 text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">
+                                    {meal.name}
+                                </h3>
+                                <p className="text-sm text-gray-500 mb-3 line-clamp-2 leading-relaxed">
+                                    {meal.description}
                                 </p>
                             </CardContent>
 
                             <CardFooter className="flex justify-between items-center pt-0 pb-6 px-6">
                                 <div className="flex flex-col">
-                                    <span className="text-xs text-gray-400 line-through">${(meal.price * 1.2).toFixed(2)}</span>
-                                    <span className="text-2xl font-bold text-orange-600">${meal.price}</span>
+                                    <span className="text-xs text-gray-400 line-through">৳{(meal.price * 1.2).toFixed(0)}</span>
+                                    <span className="text-2xl font-bold text-orange-600">৳{meal.price}</span>
                                 </div>
-                                <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/30 gap-1 font-semibold">
+                                <Button
+                                    size="sm"
+                                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/30 gap-1 font-semibold"
+                                    onClick={() => console.log("Add to cart:", meal.name)}
+                                >
                                     <Plus className="h-4 w-4" /> Add
                                 </Button>
                             </CardFooter>
                         </Card>
                     ))}
                 </div>
+
+                {meals.length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                        No meals available at the moment
+                    </div>
+                )}
             </div>
         </section>
     );
