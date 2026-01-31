@@ -74,15 +74,23 @@ export default function MenuManagement() {
         try {
             const token = localStorage.getItem("token");
 
-            // Get provider profile with meals
-            const meRes = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const meData = await meRes.json();
 
-            if (meData.success && meData.data.providerProfile) {
-                setMeals(meData.data.providerProfile.meals || []);
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/provider/meals`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                setMeals(data.data || []);
+            } else {
+                toast.error("Failed to fetch meals");
             }
         } catch (error) {
             toast.error("Failed to fetch menu");
@@ -303,7 +311,8 @@ export default function MenuManagement() {
                                 <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isSubmitting}>
+
+                                <Button type="submit"  disabled={isSubmitting || !formData.categoryId}  className="bg-orange-600 hover:bg-orange-700" >
                                     {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> :
                                         editingMeal ? "Update Meal" : "Add Meal"}
                                 </Button>

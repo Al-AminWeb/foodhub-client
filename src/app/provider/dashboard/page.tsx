@@ -49,21 +49,20 @@ export default function ProviderDashboard() {
         try {
             const token = localStorage.getItem("token");
 
-            // Fetch provider orders
+
             const ordersRes = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/provider/orders`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             const ordersData = await ordersRes.json();
 
-            // Fetch menu items (meals)
-            const meRes = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
+
+            const mealsRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/provider/meals`,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            const meData = await meRes.json();
-
-            const meals = meData.data?.providerProfile?.meals || [];
+            const mealsData = await mealsRes.json();
+            const meals = mealsData.data || [];
             const orders = ordersData.data || [];
 
             // Calculate stats
