@@ -25,6 +25,7 @@ import {
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {useCart} from "@/app/context/CartContext";
 
 export function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -88,6 +89,7 @@ export function Navbar() {
         return user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase();
     };
 
+    const { totalItems } = useCart();
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
             <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4">
@@ -128,10 +130,10 @@ export function Navbar() {
                     {/* Cart - Show for everyone including logged in */}
                     <Link href="/cart">
                         <Button variant="ghost" size="icon" className="relative hover:bg-orange-50">
-                            <ShoppingCart className="h-5 w-5 text-gray-600" />
+                            <ShoppingCart className="h-5 w-5 text-gray-600"/>
                             <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-orange-500 text-[10px] font-bold text-white flex items-center justify-center shadow-sm">
-                0
-              </span>
+  {totalItems > 9 ? '9+' : totalItems}
+</span>
                         </Button>
                     </Link>
 
@@ -260,7 +262,7 @@ export function Navbar() {
                         Restaurants
                     </Link>
                     <Link href="/cart" className="block py-2 text-gray-600 hover:text-orange-600 font-medium">
-                        Cart (0 items)
+                        Cart ({totalItems} {totalItems === 1 ? 'item' : 'items'})
                     </Link>
 
                     {user ? (

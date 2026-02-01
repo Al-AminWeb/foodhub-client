@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Plus, MapPin, ShoppingCart } from "lucide-react";
+import { useCart } from "@/app/context/CartContext";
 import { toast } from "sonner";
 
 interface Meal {
@@ -30,12 +31,20 @@ interface MealGridProps {
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop";
 
 export function MealGrid({ meals }: MealGridProps) {
-    const handleAddToCart = (e: React.MouseEvent, mealName: string) => {
+    const { addToCart } = useCart();
+
+    const handleAddToCart = (e: React.MouseEvent, meal: Meal) => {
         e.preventDefault();
         e.stopPropagation();
-        // Backend expects mealName for now (per your choice)
-        console.log("Adding to cart:", mealName);
-        toast.success(`${mealName} added to cart!`);
+
+        addToCart({
+            mealId: meal.id,
+            name: meal.name,
+            price: meal.price,
+            image: meal.image,
+            providerId: meal.provider?.restaurant || "unknown", // Using restaurant name as providerId fallback
+            providerName: meal.provider?.restaurant || "Local Restaurant",
+        });
     };
 
     if (meals.length === 0) {
@@ -109,7 +118,7 @@ export function MealGrid({ meals }: MealGridProps) {
                             <Button
                                 size="sm"
                                 className="bg-orange-600 hover:bg-orange-700 text-white shadow-lg shadow-orange-500/30 gap-1.5 font-semibold px-4 h-10"
-                                onClick={(e) => handleAddToCart(e, meal.name)}
+                                onClick={(e) => handleAddToCart(e, meal)}
                             >
                                 <Plus className="h-4 w-4" /> Add
                             </Button>
