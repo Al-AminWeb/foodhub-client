@@ -9,7 +9,8 @@ import {
     User,
     ShoppingCart,
     Menu,
-    X
+    X,
+    Home
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,18 @@ export default function CustomerLayout({
                             </Link>
                         );
                     })}
+
+                    {/* Mobile: Back to Home */}
+                    <div className="pt-4 mt-4 border-t border-gray-100">
+                        <Link
+                            href="/"
+                            onClick={() => setSidebarOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-600 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                        >
+                            <Home className="h-5 w-5 text-gray-400" />
+                            Back to Home
+                        </Link>
+                    </div>
                 </nav>
             </div>
 
@@ -108,7 +121,18 @@ export default function CustomerLayout({
                             );
                         })}
                     </nav>
-                    <div className="border-t pt-4">
+
+                    {/* Desktop: Bottom section with Back to Home and Browse Meals */}
+                    <div className="border-t pt-4 space-y-2">
+                        {/* Back to Home Button */}
+                        <Link
+                            href="/"
+                            className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-md transition-colors w-full"
+                        >
+                            <Home className="h-5 w-5 shrink-0 text-gray-400 group-hover:text-orange-600" />
+                            Back to Home
+                        </Link>
+
                         <Link href="/meals">
                             <Button variant="outline" className="w-full justify-start gap-2">
                                 <ShoppingBag className="h-4 w-4" />
