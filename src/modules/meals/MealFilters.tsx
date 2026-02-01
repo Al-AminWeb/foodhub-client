@@ -32,7 +32,7 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
     useEffect(() => {
         const loadCategories = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories/all-category`);
                 const data = await res.json();
                 if (data.success) {
                     setCategories([{ id: "all", name: "All" }, ...data.data]);
