@@ -8,7 +8,7 @@ import { Search, SlidersHorizontal, X, Filter } from "lucide-react";
 
 interface Filters {
     search: string;
-    category: string;
+    categoryId: string;
     minPrice: string;
     maxPrice: string;
     sortBy: string;
@@ -25,20 +25,40 @@ type Category = {
 };
 
 export function MealFilters({ filters, setFilters }: MealFiltersProps) {
-    const [categories, setCategories] = useState<Category[]>([{ id: "all", name: "All" }]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+    const [loadingCategories, setLoadingCategories] = useState(true);
 
-    // Fetch categories from backend
+    // Fetch categories from backend with auth
     useEffect(() => {
         const loadCategories = async () => {
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/categories/all-category`);
+                const token = localStorage.getItem("token");
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/categories/all-category`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+
                 const data = await res.json();
-                if (data.success) {
-                    setCategories([{ id: "all", name: "All" }, ...data.data]);
+                if (data.success && Array.isArray(data.data)) {
+                    setCategories(data.data);
+                } else {
+                    setCategories([]);
                 }
             } catch (err) {
-                console.error("Failed to fetch categories", err);
+                console.error("Failed to fetch categories:", err);
+                setCategories([]);
+            } finally {
+                setLoadingCategories(false);
             }
         };
 
@@ -49,31 +69,39 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
         setFilters({ ...filters, search: value });
     };
 
-    const handleCategoryChange = (categoryName: string) => {
-        setFilters({ ...filters, category: categoryName });
+    const handleCategoryChange = (categoryId: string) => {
+        setFilters({ ...filters, categoryId });
     };
 
     const handlePriceChange = (type: 'min' | 'max', value: string) => {
-        setFilters({
-            ...filters,
-            [type === 'min' ? 'minPrice' : 'maxPrice']: value
-        });
+        if (value === "" || (!isNaN(Number(value)) && Number(value) >= 0)) {
+            setFilters({
+                ...filters,
+                [type === 'min' ? 'minPrice' : 'maxPrice']: value
+            });
+        }
     };
 
     const clearFilters = () => {
         setFilters({
             search: "",
-            category: "All",
+            categoryId: "",
             minPrice: "",
             maxPrice: "",
             sortBy: "featured",
         });
     };
 
-    const hasActiveFilters = filters.category !== "All" ||
+    const hasActiveFilters = filters.categoryId !== "" ||
         filters.search ||
         filters.minPrice ||
         filters.maxPrice;
+
+    const getCategoryName = (id: string) => {
+        if (!id) return "All";
+        const cat = categories.find(c => c.id === id);
+        return cat?.name || "Unknown";
+    };
 
     return (
         <div className="space-y-6">
@@ -137,19 +165,38 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
 
             {/* Category Pills - Desktop */}
             <div className="hidden md:flex flex-wrap gap-2">
-                {categories.map((category) => (
-                    <button
-                        key={category.id}
-                        onClick={() => handleCategoryChange(category.name)}
-                        className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
-                            filters.category === category.name
-                                ? "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
-                        }`}
-                    >
-                        {category.name}
-                    </button>
-                ))}
+                {/* All Button */}
+                <button
+                    onClick={() => handleCategoryChange("")}
+                    className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                        filters.categoryId === ""
+                            ? "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+                    }`}
+                >
+                    All
+                </button>
+
+                {loadingCategories ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm ml-4">
+                        <div className="w-4 h-4 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+                        Loading categories...
+                    </div>
+                ) : (
+                    categories.map((category) => (
+                        <button
+                            key={category.id}
+                            onClick={() => handleCategoryChange(category.id)}
+                            className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
+                                filters.categoryId === category.id
+                                    ? "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105"
+                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900"
+                            }`}
+                        >
+                            {category.name}
+                        </button>
+                    ))
+                )}
             </div>
 
             {/* Mobile Filters */}
@@ -157,12 +204,22 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                 <div className="md:hidden bg-orange-50 p-4 rounded-xl border-2 border-orange-100 space-y-4">
                     <p className="font-semibold text-gray-900 mb-2">Categories</p>
                     <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => handleCategoryChange("")}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                                filters.categoryId === ""
+                                    ? "bg-orange-600 text-white"
+                                    : "bg-white text-gray-600 border border-gray-200"
+                            }`}
+                        >
+                            All
+                        </button>
                         {categories.map((category) => (
                             <button
                                 key={category.id}
-                                onClick={() => handleCategoryChange(category.name)}
+                                onClick={() => handleCategoryChange(category.id)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                                    filters.category === category.name
+                                    filters.categoryId === category.id
                                         ? "bg-orange-600 text-white"
                                         : "bg-white text-gray-600 border border-gray-200"
                                 }`}
@@ -177,6 +234,7 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                         <div className="flex items-center gap-2">
                             <Input
                                 type="number"
+                                min="0"
                                 placeholder="Min"
                                 value={filters.minPrice}
                                 onChange={(e) => handlePriceChange('min', e.target.value)}
@@ -185,6 +243,7 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                             <span className="text-gray-400">-</span>
                             <Input
                                 type="number"
+                                min="0"
                                 placeholder="Max"
                                 value={filters.maxPrice}
                                 onChange={(e) => handlePriceChange('max', e.target.value)}
@@ -203,6 +262,7 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                     <div className="flex items-center gap-2">
                         <Input
                             type="number"
+                            min="0"
                             placeholder="Min"
                             value={filters.minPrice}
                             onChange={(e) => handlePriceChange('min', e.target.value)}
@@ -211,6 +271,7 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                         <span className="text-gray-400">-</span>
                         <Input
                             type="number"
+                            min="0"
                             placeholder="Max"
                             value={filters.maxPrice}
                             onChange={(e) => handlePriceChange('max', e.target.value)}
@@ -223,13 +284,13 @@ export function MealFilters({ filters, setFilters }: MealFiltersProps) {
                     <div className="flex items-center gap-2 ml-auto">
                         <span className="text-sm text-gray-500">Active filters:</span>
                         <div className="flex gap-2">
-                            {filters.category !== "All" && (
+                            {filters.categoryId !== "" && (
                                 <Badge
                                     variant="secondary"
                                     className="bg-orange-100 text-orange-700 hover:bg-orange-200 cursor-pointer"
-                                    onClick={() => handleCategoryChange("All")}
+                                    onClick={() => handleCategoryChange("")}
                                 >
-                                    {filters.category} <X className="h-3 w-3 ml-1" />
+                                    {getCategoryName(filters.categoryId)} <X className="h-3 w-3 ml-1" />
                                 </Badge>
                             )}
                             {(filters.minPrice || filters.maxPrice) && (

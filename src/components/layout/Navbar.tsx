@@ -91,7 +91,7 @@ export function Navbar() {
 
     const { totalItems } = useCart();
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60">
+        <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md supports-backdrop-filter:bg-white/60">
             <div className="container mx-auto max-w-7xl flex h-16 items-center justify-between px-4">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2 font-bold text-2xl">

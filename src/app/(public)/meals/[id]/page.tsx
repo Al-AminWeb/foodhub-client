@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Star, Plus, Minus, ShoppingCart, ArrowLeft, MapPin, Clock, Utensils, Loader2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Star, Plus, Minus, ShoppingCart, ArrowLeft, MapPin, Clock, Utensils, Loader2, Send } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -17,6 +18,7 @@ interface Review {
     user: {
         name: string;
     };
+    createdAt?: string;
 }
 
 interface Meal {
@@ -40,34 +42,167 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1546069901-ba9599a7e63
 
 export default function MealDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const [meal, setMeal] = useState<Meal | null>(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [hasOrdered, setHasOrdered] = useState(false);
+    const [userReview, setUserReview] = useState<Review | null>(null);
+
+    // Review form state
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [submittingReview, setSubmittingReview] = useState(false);
 
     useEffect(() => {
-        const fetchMeal = async () => {
-            try {
-                const res = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/meals/${params.id}`
-                );
-                const data = await res.json();
+        const token = localStorage.getItem("token");
+        setIsAuthenticated(!!token);
 
-                if (data.success) {
-                    setMeal(data.data);
-                } else {
-                    toast.error("Meal not found");
-                }
-            } catch (error) {
-                toast.error("Failed to fetch meal details");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (params.id) {
-            fetchMeal();
+        fetchMeal();
+        if (token) {
+            checkIfCanReview();
         }
     }, [params.id]);
+
+    const fetchMeal = async () => {
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/meals/${params.id}`
+            );
+            const data = await res.json();
+
+            if (data.success) {
+                setMeal(data.data);
+            } else {
+                toast.error("Meal not found");
+            }
+        } catch (error) {
+            toast.error("Failed to fetch meal details");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const checkIfCanReview = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return;
+
+            // Check if user has any delivered orders with this meal
+            const ordersRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/orders/me`,
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (ordersRes.ok) {
+                const ordersData = await ordersRes.json();
+                if (ordersData.success && ordersData.data) {
+                    // Check if any delivered order contains this meal
+                    const hasDeliveredOrder = ordersData.data.some((order: any) =>
+                        order.status === "DELIVERED" &&
+                        order.items?.some((item: any) => item.meal?.id === params.id || item.mealId === params.id)
+                    );
+                    setHasOrdered(hasDeliveredOrder);
+                }
+            }
+
+            // Check if user already reviewed this meal
+            const reviewsRes = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/reviews/${params.id}`
+            );
+
+            if (reviewsRes.ok) {
+                const reviewsData = await reviewsRes.json();
+                if (reviewsData.success && reviewsData.data) {
+                    // Try to find if current user already reviewed
+                    const token = localStorage.getItem("token");
+                    if (token) {
+                        try {
+                            const userRes = await fetch(
+                                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`,
+                                { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            if (userRes.ok) {
+                                const userData = await userRes.json();
+                                if (userData.success) {
+                                    const existingReview = reviewsData.data.find(
+                                        (r: Review) => r.user.name === userData.data.name
+                                    );
+                                    if (existingReview) {
+                                        setUserReview(existingReview);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Failed to check existing review");
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Failed to check review eligibility", error);
+        }
+    };
+
+    const handleSubmitReview = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (rating === 0) {
+            toast.error("Please select a rating");
+            return;
+        }
+
+        if (!comment.trim()) {
+            toast.error("Please write a comment");
+            return;
+        }
+
+        const token = localStorage.getItem("token");
+        if (!token) {
+            toast.error("Please login to submit a review");
+            router.push("/login");
+            return;
+        }
+
+        setSubmittingReview(true);
+
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/reviews`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        mealId: params.id,
+                        rating: rating,
+                        comment: comment.trim()
+                    })
+                }
+            );
+
+            const data = await res.json();
+
+            if (data.success) {
+                toast.success("Review submitted successfully!");
+                setUserReview(data.data);
+                setRating(0);
+                setComment("");
+                // Refresh meal data to show new review
+                fetchMeal();
+            } else {
+                toast.error(data.message || "Failed to submit review");
+            }
+        } catch (error) {
+            toast.error("Failed to submit review. Please try again.");
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
 
     const calculateAverageRating = () => {
         if (!meal?.reviews?.length) return 0;
@@ -221,38 +356,153 @@ export default function MealDetailPage() {
                                 {meal.description}
                             </p>
                         </div>
+                    </div>
+                </div>
 
-                        {/* Reviews Section */}
-                        {meal.reviews.length > 0 && (
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-lg">Customer Reviews</h3>
-                                <div className="space-y-3">
+                {/* Reviews Section - Full Width */}
+                <div className="mt-16">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Review Form */}
+                        <div className="lg:col-span-1">
+                            <Card className="p-6 sticky top-24">
+                                <h3 className="font-bold text-lg mb-4">Write a Review</h3>
+
+                                {!isAuthenticated ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-gray-600 mb-4">Please login to write a review</p>
+                                        <Button
+                                            className="w-full bg-orange-600 hover:bg-orange-700"
+                                            onClick={() => router.push("/login")}
+                                        >
+                                            Login to Review
+                                        </Button>
+                                    </div>
+                                ) : userReview ? (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                                        <p className="text-green-800 font-medium mb-2">✓ You already reviewed this meal</p>
+                                        <p className="text-sm text-green-600">Thank you for your feedback!</p>
+                                    </div>
+                                ) : !hasOrdered ? (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                                        <p className="text-yellow-800 text-sm">
+                                            You can only review meals you have ordered and received.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleSubmitReview} className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Your Rating
+                                            </label>
+                                            <div className="flex gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => setRating(star)}
+                                                        onMouseEnter={() => setHoverRating(star)}
+                                                        onMouseLeave={() => setHoverRating(0)}
+                                                        className="p-1 focus:outline-none transition-transform hover:scale-110"
+                                                    >
+                                                        <Star
+                                                            className={`h-8 w-8 ${
+                                                                star <= (hoverRating || rating)
+                                                                    ? "fill-yellow-400 text-yellow-400"
+                                                                    : "text-gray-300"
+                                                            }`}
+                                                        />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                {rating > 0 ? `${rating} out of 5 stars` : "Click to rate"}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Your Review
+                                            </label>
+                                            <Textarea
+                                                placeholder="Share your experience with this meal..."
+                                                value={comment}
+                                                onChange={(e) => setComment(e.target.value)}
+                                                className="min-h-[120px] resize-none"
+                                                required
+                                            />
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            className="w-full bg-orange-600 hover:bg-orange-700 gap-2"
+                                            disabled={submittingReview || rating === 0}
+                                        >
+                                            {submittingReview ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Submitting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="h-4 w-4" />
+                                                    Submit Review
+                                                </>
+                                            )}
+                                        </Button>
+                                    </form>
+                                )}
+                            </Card>
+                        </div>
+
+                        {/* Reviews List */}
+                        <div className="lg:col-span-2 space-y-4">
+                            {meal.reviews.length === 0 ? (
+                                <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                    <Star className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">No reviews yet</h3>
+                                    <p className="text-gray-500">Be the first to review this meal!</p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4">
                                     {meal.reviews.map((review) => (
-                                        <div key={review.id} className="bg-gray-50 p-4 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                                                    <span className="text-orange-600 font-bold text-sm">
-                                                        {review.user.name.charAt(0).toUpperCase()}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-sm">{review.user.name}</p>
-                                                    <div className="flex text-yellow-400 text-xs">
-                                                        {[...Array(5)].map((_, i) => (
-                                                            <Star
-                                                                key={i}
-                                                                className={`h-3 w-3 ${i < review.rating ? 'fill-current' : 'text-gray-300'}`}
-                                                            />
-                                                        ))}
+                                        <Card key={review.id} className="p-6 border-none shadow-sm">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                                        <span className="text-orange-600 font-bold">
+                                                            {review.user.name.charAt(0).toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-gray-900">{review.user.name}</p>
+                                                        <div className="flex text-yellow-400 text-sm">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star
+                                                                    key={i}
+                                                                    className={`h-4 w-4 ${
+                                                                        i < review.rating ? "fill-current" : "text-gray-300"
+                                                                    }`}
+                                                                />
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                {review.createdAt && (
+                                                    <span className="text-sm text-gray-400">
+                                                        {new Date(review.createdAt).toLocaleDateString()}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <p className="text-sm text-gray-600">{review.comment}</p>
-                                        </div>
+                                            <p className="mt-4 text-gray-600 leading-relaxed">
+                                                {review.comment}
+                                            </p>
+                                        </Card>
                                     ))}
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

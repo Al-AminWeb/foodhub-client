@@ -1,17 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { Loader2 } from "lucide-react";
-import {MealFilters} from "@/modules/meals/MealFilters";
-import {MealGrid} from "@/modules/meals/MealGrid";
+import { MealFilters } from "@/modules/meals/MealFilters";
+import { MealGrid } from "@/modules/meals/MealGrid";
+
+interface Filters {
+    search: string;
+    categoryId: string;
+    minPrice: string;
+    maxPrice: string;
+    sortBy: string;
+}
 
 export default function MealsPage() {
     const [meals, setMeals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<Filters>({
         search: "",
-        category: "All",
+        categoryId: "",  // Changed from "All" to empty string
         minPrice: "",
         maxPrice: "",
         sortBy: "featured",
@@ -23,19 +30,37 @@ export default function MealsPage() {
             const params = new URLSearchParams();
 
             if (filters.search) params.append("search", filters.search);
-            if (filters.category !== "All") params.append("category", filters.category);
+
+            // FIXED: Use categoryId instead of category, check for empty string
+            if (filters.categoryId) params.append("categoryId", filters.categoryId);
+
             if (filters.minPrice) params.append("minPrice", filters.minPrice);
             if (filters.maxPrice) params.append("maxPrice", filters.maxPrice);
 
-            // Note: Your backend doesn't have sortBy param yet, but keeping for future
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/meals?${params.toString()}`,
-                { cache: "no-store" }
-            );
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/meals?${params.toString()}`,
+                    { cache: "no-store" }
+                );
 
-            const json = await res.json();
-            setMeals(json.data || []);
-            setLoading(false);
+                const json = await res.json();
+
+                // Handle client-side sorting since backend might not support it
+                let fetchedMeals = json.data || [];
+
+                if (filters.sortBy === "price-asc") {
+                    fetchedMeals.sort((a: any, b: any) => a.price - b.price);
+                } else if (filters.sortBy === "price-desc") {
+                    fetchedMeals.sort((a: any, b: any) => b.price - a.price);
+                }
+
+                setMeals(fetchedMeals);
+            } catch (error) {
+                console.error("Failed to fetch meals:", error);
+                setMeals([]);
+            } finally {
+                setLoading(false);
+            }
         };
 
         fetchMeals();
@@ -81,9 +106,29 @@ export default function MealsPage() {
                         <div className="flex items-center justify-between mb-6">
                             <p className="text-gray-600">
                                 Showing <span className="font-bold text-gray-900">{meals.length}</span> delicious meals
+                                {filters.categoryId && " in this category"}
                             </p>
                         </div>
-                        <MealGrid meals={meals} />
+
+                        {meals.length === 0 ? (
+                            <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
+                                <p className="text-gray-500 text-lg mb-4">No meals found matching your criteria.</p>
+                                <button
+                                    onClick={() => setFilters({
+                                        search: "",
+                                        categoryId: "",
+                                        minPrice: "",
+                                        maxPrice: "",
+                                        sortBy: "featured",
+                                    })}
+                                    className="text-orange-600 hover:text-orange-700 font-semibold underline"
+                                >
+                                    Clear all filters
+                                </button>
+                            </div>
+                        ) : (
+                            <MealGrid meals={meals} />
+                        )}
                     </>
                 )}
             </div>

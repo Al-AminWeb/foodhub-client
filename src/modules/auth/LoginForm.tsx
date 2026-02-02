@@ -37,6 +37,7 @@ export function LoginForm() {
 
 
             localStorage.setItem("token", data.data.token);
+            document.cookie = `token=${data.data.token}; path=/; max-age=${60*60*24*120}`;
 
             toast.success("Login successful!");
             router.push("/");
